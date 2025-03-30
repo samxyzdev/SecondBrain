@@ -1,10 +1,10 @@
 import express from "express";
 import { z } from "zod";
 import jwt from "jsonwebtoken";
-
+import { User } from "../db";
+import "dotenv";
+import bcrypt from "bcrypt";
 export const userRouter = express.Router();
-
-const DB: any = [];
 
 const signupSchema = z.object({
   username: z.string().min(3).max(10),
@@ -17,7 +17,7 @@ const signupSchema = z.object({
 
 type signupType = z.infer<typeof signupSchema>;
 
-userRouter.post("/signup", (req: any, res: any) => {
+userRouter.post("/signup", async (req: any, res: any) => {
   const userInput = signupSchema.safeParse(req.body);
 
   if (!userInput.success) {
@@ -26,16 +26,20 @@ userRouter.post("/signup", (req: any, res: any) => {
     });
   }
 
-  const checkUserInDb = DB.find(
-    (data: any) => data.username === userInput.data.username
-  );
-  if (checkUserInDb) {
+  const existingUser = await User.findOne({
+    username: userInput.data.username,
+  });
+  if (existingUser) {
     return res.status(403).send({
       msg: "User already exists with this username",
     });
   }
-  const serverOperation = DB.push(userInput.data);
-  if (!serverOperation) {
+  const hashedPassword = await bcrypt.hash(userInput.data.password, 10);
+  const newUser = await User.create({
+    username: userInput.data.username,
+    password: hashedPassword,
+  });
+  if (!newUser) {
     return res.status(500).send({
       msg: "Server error",
     });
@@ -43,22 +47,27 @@ userRouter.post("/signup", (req: any, res: any) => {
   res.status(200).send("Signed up");
 });
 
-userRouter.get("/signin", (req: any, res: any) => {
+userRouter.get("/signin", async (req: any, res: any) => {
   const userInputSignin = req.body;
-  const checkUserinDb = DB.find(
-    (data: any) => data.usernmae === userInputSignin.username
-  );
-  if (!checkUserinDb) {
+  const existingUser = await User.findOne({
+    username: userInputSignin.data.username,
+  });
+  if (!existingUser) {
     return res.status(403).send({
       msg: "User not exist in db",
     });
   }
-  const token = jwt.sign(userInputSignin, "SameerAhmed");
+
+  const isMatch = await bcrypt.compare(
+    userInputSignin.password,
+    existingUser.password
+  );
+
+  const token = jwt.sign(
+    { id: existingUser._id, username: existingUser.username },
+    process.env.JWT_SECRET!
+  );
   res.status(200).send({
     token: token,
   });
 });
-
-module.exports = {
-  userRouter,
-};
