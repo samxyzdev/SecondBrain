@@ -18,7 +18,7 @@ export const authentication = (
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).send({
+      return res.status(401).json({
         msg: "Authentication token is missing or invalid format",
       });
     }
@@ -27,7 +27,7 @@ export const authentication = (
     (req as AuthenticatedRequest)._id = verify._id;
     next();
   } catch (e) {
-    return res.status(500).send({
+    return res.status(500).json({
       msg: "Internal server error",
     });
   }
