@@ -2,7 +2,7 @@ import jwt, { JwtPayload } from "jsonwebtoken";
 import "dotenv/config";
 import { NextFunction, Request, Response } from "express";
 
-interface AuthenticatedRequest extends Request {
+export interface AuthenticatedRequest extends Request {
   _id: string;
 }
 
