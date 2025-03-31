@@ -23,7 +23,7 @@ userRouter.post(
   async (req: Request, res: Response): Promise<any> => {
     const userInput = signupSchema.safeParse(req.body);
     if (!userInput.success) {
-      return res.status(411).send({
+      return res.status(411).json({
         msg: "Error in inputs",
       });
     }
@@ -32,7 +32,7 @@ userRouter.post(
         username: userInput.data.username,
       });
       if (existingUser) {
-        return res.status(403).send({
+        return res.status(403).json({
           msg: "User already exists with this username",
         });
       }
@@ -42,13 +42,15 @@ userRouter.post(
         password: hashedPassword,
       });
       if (!newUser) {
-        return res.status(500).send({
+        return res.status(500).json({
           msg: "Server error",
         });
       }
-      return res.status(200).send("Signed up");
+      return res.status(200).json({
+        msg: "Signed up",
+      });
     } catch (e) {
-      return res.status(500).send({
+      return res.status(500).json({
         msg: "Internal Server Error",
       });
     }
@@ -64,7 +66,7 @@ userRouter.post(
   async (req: Request, res: Response): Promise<any> => {
     const userInputSignin = signinSchema.safeParse(req.body);
     if (!userInputSignin.success) {
-      return res.status(411).send({
+      return res.status(411).json({
         msg: "Error in inputs",
       });
     }
@@ -73,7 +75,7 @@ userRouter.post(
         username: userInputSignin.data.username,
       });
       if (!existingUser) {
-        return res.status(403).send({
+        return res.status(403).json({
           msg: "User not exist in db",
         });
       }
@@ -82,7 +84,7 @@ userRouter.post(
         existingUser.password
       );
       if (!isMatch) {
-        return res.status(401).send({
+        return res.status(401).json({
           msg: "Invalid Password",
         });
       }
@@ -90,11 +92,11 @@ userRouter.post(
         { _id: existingUser._id, username: existingUser.username },
         process.env.JWT_SECRET!
       );
-      return res.status(200).send({
+      return res.status(200).json({
         token: token,
       });
     } catch (e) {
-      return res.status(500).send({
+      return res.status(500).json({
         msg: "Internal Server Error",
       });
     }
