@@ -1,4 +1,4 @@
-import mongoose, { Types } from "mongoose";
+import mongoose, { model, Types } from "mongoose";
 import { Schema } from "zod";
 import "dotenv/config";
 
@@ -31,3 +31,5 @@ const linkSchema = new mongoose.Schema({
 export const User = mongoose.model("User", userSchema);
 
 export const Content = mongoose.model("Content", contentSchema);
+
+export const LinkModel = model("Links", linkSchema);

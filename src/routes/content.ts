@@ -1,7 +1,8 @@
 import express, { Request, Response } from "express";
 import z, { any } from "zod";
-import { Content } from "../db";
+import { Content, LinkModel, User } from "../db";
 import { AuthenticatedRequest, authentication } from "../middleware";
+import { random } from "../utils";
 
 export const contentRouter = express.Router();
 
@@ -9,7 +10,7 @@ const contentSchema = z.object({
   type: z.enum(["image", "video", "article", "audio"]),
   link: z.string(),
   title: z.string(),
-  tags: z.array(z.string()),
+  // tags: z.array(z.string()),
 });
 contentRouter.post(
   "/content",
@@ -24,11 +25,13 @@ contentRouter.post(
       });
     }
     try {
+      console.log(req._id);
+
       const contentCreate = await Content.create({
         type: userContent.data.type,
         link: userContent.data.link,
         title: userContent.data.title,
-        tags: userContent.data.tags,
+        // tags: userContent.data.tags,
         userId: req._id,
       });
       if (!contentCreate) {
@@ -40,6 +43,8 @@ contentRouter.post(
         msg: "Content created successfully",
       });
     } catch (e) {
+      console.log(e);
+
       return res.status(500).json({
         msg: "Internal Server Error",
       });
@@ -67,8 +72,8 @@ contentRouter.get(
   }
 );
 
-contentRouter.post(
-  "/content/delete",
+contentRouter.delete(
+  "/content",
   // @ts-ignore
   authentication,
   async (req: AuthenticatedRequest, res: Response) => {
@@ -109,3 +114,61 @@ contentRouter.post(
     }
   }
 );
+
+contentRouter.post(
+  "/share",
+  // @ts-ignore
+  authentication,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const share = req.body.share;
+    if (share) {
+      const existingLink = await LinkModel.findOne({
+        userId: req._id,
+      });
+      if (existingLink) {
+        res.json({
+          hash: existingLink.hash,
+        });
+        return;
+      }
+      const hash = random(10);
+      await LinkModel.create({
+        userId: req._id,
+        hash: hash,
+      });
+      res.json({
+        msg: "/share/" + hash,
+      });
+    } else {
+      await LinkModel.deleteOne({
+        userId: req._id,
+      });
+    }
+    res.json({
+      msg: "Removed link",
+    });
+  }
+);
+
+// @ts-ignore
+contentRouter.get("/:shareLink", async (req: Request, res: Response) => {
+  const hash = req.params.shareLink;
+  const link = await LinkModel.findOne({
+    hash: hash,
+  });
+  if (!link) {
+    return res.status(411).json({
+      msg: "Sorry incorrect input",
+    });
+  }
+  const content = await Content.find({
+    userId: link.userId,
+  });
+  const user = await User.findOne({
+    _id: link.userId,
+  });
+  return res.json({
+    username: user?.username,
+    content: content,
+  });
+});
